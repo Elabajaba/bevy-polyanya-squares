@@ -2,7 +2,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use bevy::prelude::{App, ClearColor, Color, Msaa, NonSend, WindowDescriptor};
-use bevy::window::WindowId;
+use bevy::window::{PresentMode, WindowId};
 use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use bevy_game::GamePlugin;
@@ -14,10 +14,11 @@ fn main() {
         .insert_resource(Msaa { samples: 1 })
         .insert_resource(ClearColor(Color::rgb(0.4, 0.4, 0.4)))
         .insert_resource(WindowDescriptor {
-            width: 800.,
-            height: 600.,
+            width: 1920.,
+            height: 1080.,
             title: "Bevy game".to_string(), // ToDo
             canvas: Some("#bevy".to_owned()),
+            present_mode: PresentMode::AutoNoVsync,
             ..Default::default()
         })
         .add_plugins(DefaultPlugins)
@@ -38,3 +39,9 @@ fn set_window_icon(windows: NonSend<WinitWindows>) {
         primary.set_window_icon(Some(icon));
     };
 }
+
+// TODO:
+//  1. Generate a tilemap
+//  2. Generate a navmesh from the tilemap
+//  2.5: Hook up polyanya to find paths on the navmesh
+//  3. Input handling

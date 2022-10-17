@@ -1,8 +1,8 @@
 [package]
-name = "bevy_game" # ToDo
+name = "bevy_game"                                           # ToDo
 version = "0.1.0"
 publish = false
-authors = ["Niklas Eicker <git@nikl.me>"] # ToDo: you are the author ;)
+authors = ["Elabajaba <Elabajaba@users.noreply.github.com>"]
 edition = "2021"
 exclude = ["dist", "build", "assets", "credits"]
 
@@ -13,23 +13,37 @@ opt-level = 3
 opt-level = 1
 
 [profile.release]
-lto = true
-codegen-units = 1
+lto = "thin"
+# codegen-units = 1
 
 [features]
-dev = [
-    "bevy/dynamic",
-]
+dev = ["bevy/dynamic"]
 
 [dependencies]
-bevy = { version = "0.8", default-features = false, features = ["bevy_asset", "bevy_winit", "render", "png", "x11"] }
+bevy = { version = "0.8", default-features = false, features = [
+    "bevy_asset",
+    "bevy_winit",
+    "render",
+    "png",
+    "x11",
+] }
 bevy_kira_audio = { version = "0.12" }
 bevy_asset_loader = { version = "0.12" }
-rand = { version = "0.8.3" }
+polyanya = "0.1.6"
+fastrand = "1.8.0"
+leafwing-input-manager = "0.5.2"
+bevy_egui = "0.16.1"
+bevy-inspector-egui = "0.13.0"
+bevy_pathmesh = {git = "https://github.com/vleue/bevy_pathmesh.git", branch = "main" } 
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.26.0", default-features = false }
 image = { version = "0.24", default-features = false }
+bevy_ecs_tilemap = "0.8.0"
+# rkyv = "0.7.39"
+indexmap = "1.9.1"
+bevy_prototype_debug_lines = "0.8.1"
+# bevy_config_cam = { git = "https://github.com/BlackPhlox/bevy_config_cam.git", branch = "bevy_dolly" }
 
 [build-dependencies]
 embed-resource = "1.4"
