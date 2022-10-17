@@ -249,6 +249,7 @@ impl Default for NavigatorCount {
 fn spawn(
     mut commands: Commands,
     mut navigator_count: ResMut<NavigatorCount>,
+    transform_q: Query<&Transform, With<TempNavmesh>>,
 ) {
     if navigator_count.0 >= 100000 {
         return;
@@ -347,7 +348,7 @@ fn compute_paths(
     // } else {
     //     return;
     // };
-    for (entity, target, transform) in &with_target {
+    with_target.for_each(|(entity, target, transform)| {
         let in_mesh = transform.translation.truncate();
 
         let to = target.target;
@@ -373,7 +374,7 @@ fn compute_paths(
             })
             .detach();
         commands.entity(entity).insert(finding);
-    }
+    });
 }
 
 #[derive(Default)]
@@ -393,7 +394,7 @@ fn poll_path_tasks(
     let temp = mesh_query.single();
     let mesh = &temp.navmesh;
 
-    for (entity, task, transform) in &computing {
+    computing.for_each(|(entity, task, transform)| {
         let mut task = task.0.write().unwrap();
         if task.done {
             stats.pathfinding_duration.push_front(task.duration);
@@ -419,7 +420,7 @@ fn poll_path_tasks(
                     .remove::<Target>();
             }
         }
-    }
+    });
 }
 
 fn move_navigator(
@@ -429,7 +430,7 @@ fn move_navigator(
     // mesh_q: Query<&TempNavmesh>,
 ) {
     // let temp = mesh_q.single();
-    for (entity, mut transform, mut path, navigator) in &mut query {
+    query.for_each_mut(|(entity, mut transform, mut path, navigator)| {
         let next = path.path[0];
         let toward = next - transform.translation.xy();
         // TODO: compare this in mesh dimensions, not in display dimensions
@@ -441,19 +442,16 @@ fn move_navigator(
         }
         transform.translation +=
             (toward.normalize() * time.delta_seconds() * navigator.speed).extend(0.0);
-    }
+    });
 }
 
 fn display_path(
     query: Query<(&Transform, &Path, &Navigator)>,
     mut lines: ResMut<DebugLines>,
     display_mode: Res<DisplayMode>,
-    // mesh_q: Query<&TempNavmesh>,
 ) {
     if *display_mode == DisplayMode::Line {
-        // let temp = mesh_q.single();
-
-        for (transform, path, navigator) in &query {
+        query.for_each(|(transform, path, navigator)| {
             (1..path.path.len()).for_each(|i| {
                 lines.line_colored(
                     (path.path[i - 1]).extend(0f32),
@@ -470,7 +468,7 @@ fn display_path(
                     navigator.color,
                 );
             }
-        }
+        });
     }
 }
 
@@ -484,16 +482,19 @@ fn go_somewhere(
             Without<Target>,
         ),
     >,
-    mesh_q: Query<&TempNavmesh>,
+    mesh_q: Query<(&TempNavmesh, &Transform)>,
     mut commands: Commands,
 ) {
-    let temp = mesh_q.single();
+    let (temp, transform) = mesh_q.single();
     let mesh_size = &temp.dimensions;
     let rng = fastrand::Rng::new();
-    for navigator in &query {
-        let target = Vec2::new(rng.f32() * mesh_size.x, rng.f32() * mesh_size.y);
-        commands.entity(navigator).insert(Target { target: target });
-    }
+    query.for_each(|navigator| {
+        let target = Vec2::new(
+            rng.f32() * mesh_size.x + transform.translation.x,
+            rng.f32() * mesh_size.y + transform.translation.y,
+        );
+        commands.entity(navigator).insert(Target { target });
+    });
 }
 
 fn update_ui(

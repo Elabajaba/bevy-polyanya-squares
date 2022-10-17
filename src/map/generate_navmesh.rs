@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{info, Commands, Component, Entity, IVec2, Query, Vec2},
+    prelude::{info, Commands, Component, Entity, IVec2, Query, Transform, Vec2},
     utils::{HashSet, Instant},
 };
 use indexmap::IndexMap;
@@ -52,13 +52,19 @@ pub struct TempNavmesh {
 /// See https://github.com/vleue/polyanya/blob/main/meshes/format.txt
 pub(crate) fn generate_map_namvesh_square_unoptimized(
     mut commands: Commands,
-    tilemap_query: Query<(Entity, &TilemapType, &TilemapGridSize, &TileStorage)>,
+    tilemap_query: Query<(
+        Entity,
+        &TilemapType,
+        &TilemapGridSize,
+        &TileStorage,
+        &Transform,
+    )>,
     tile_query: Query<(&TilePos, &TileCost)>,
 ) {
     println!("trying to generate navmesh");
     let start_time = Instant::now();
     // println!("tilemap query size: {}", tilemap_query.)
-    for (entity, map_type, grid_size, tilemap_storage) in tilemap_query.iter() {
+    for (entity, map_type, grid_size, tilemap_storage, transform) in tilemap_query.iter() {
         // We have the vertices and their connected polygons, but not if they're an edge
 
         // num tiles * 1.3 sounds about right?
@@ -90,8 +96,8 @@ pub(crate) fn generate_map_namvesh_square_unoptimized(
             .enumerate()
             .for_each(|(idx, &corner_pos)| {
                 let pos = IVec2::new(
-                    corner_pos.0 + world_pos.x as i32,
-                    corner_pos.1 + world_pos.y as i32,
+                    corner_pos.0 + (world_pos.x + transform.translation.x) as i32,
+                    corner_pos.1 + (world_pos.y + transform.translation.y) as i32,
                 );
                 let connections_entry = vertices.entry(pos);
                 vertex_indices[idx] = connections_entry.index();
