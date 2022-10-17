@@ -36,6 +36,7 @@ impl Plugin for MyNavPlugin {
             })
             .add_plugin(PathmeshPlugin)
             .init_resource::<Stats>()
+            .init_resource::<NavigatorCount>()
             .insert_resource(TaskMode::Blocking)
             .insert_resource(DisplayMode::Line)
             .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup))
@@ -236,9 +237,22 @@ struct Path {
     path: Vec<Vec2>,
 }
 
-fn spawn(mut commands: Commands, // , mesh_query: Query<&TempNavmesh>
+// #[derive(Resource)]
+struct NavigatorCount(usize);
+
+impl Default for NavigatorCount {
+    fn default() -> Self {
+        NavigatorCount(0)
+    }
+}
+
+fn spawn(
+    mut commands: Commands,
+    mut navigator_count: ResMut<NavigatorCount>,
 ) {
-    // let temp = mesh_query.single();
+    if navigator_count.0 >= 100000 {
+        return;
+    }
 
     let rng = fastrand::Rng::new();
 
@@ -251,12 +265,43 @@ fn spawn(mut commands: Commands, // , mesh_query: Query<&TempNavmesh>
         Vec2::new(391.0, 231.0),
         Vec2::new(25.0, 433.0),
         Vec2::new(300.0, 679.0),
+        Vec2::new(575.0, 410.0),
+        Vec2::new(387.0, 524.0),
+        Vec2::new(762.0, 692.0),
+        Vec2::new(991.0, 426.0),
+        Vec2::new(746.0, 241.0),
+        Vec2::new(391.0, 231.0),
+        Vec2::new(25.0, 433.0),
+        Vec2::new(300.0, 679.0),
+        Vec2::new(575.0, 410.0),
+        Vec2::new(387.0, 524.0),
+        Vec2::new(762.0, 692.0),
+        Vec2::new(991.0, 426.0),
+        Vec2::new(746.0, 241.0),
+        Vec2::new(391.0, 231.0),
+        Vec2::new(25.0, 433.0),
+        Vec2::new(300.0, 679.0),
+        Vec2::new(575.0, 410.0),
+        Vec2::new(387.0, 524.0),
+        Vec2::new(762.0, 692.0),
+        Vec2::new(991.0, 426.0),
+        Vec2::new(746.0, 241.0),
+        Vec2::new(391.0, 231.0),
+        Vec2::new(25.0, 433.0),
+        Vec2::new(300.0, 679.0),
+        Vec2::new(575.0, 410.0),
+        Vec2::new(387.0, 524.0),
+        Vec2::new(762.0, 692.0),
+        Vec2::new(991.0, 426.0),
+        Vec2::new(746.0, 241.0),
+        Vec2::new(391.0, 231.0),
+        Vec2::new(25.0, 433.0),
+        Vec2::new(300.0, 679.0),
     ];
 
-    // let in_mesh = in_mesh_starts[rng.usize(0..in_mesh_starts.len())];
-
-    for in_mesh in in_mesh_starts {
-        let position = in_mesh;
+    in_mesh_starts.iter().for_each(|in_mesh| {
+        navigator_count.0 += 1;
+        let position = *in_mesh + transform_q.single().translation.truncate();
         let color = Color::hsl(rng.f32() * 360.0, 1.0, 0.5).as_rgba();
         commands
             .spawn_bundle(SpriteBundle {
@@ -273,7 +318,7 @@ fn spawn(mut commands: Commands, // , mesh_query: Query<&TempNavmesh>
                 speed: rng.f32() * 50.0 + 50.0,
                 color,
             });
-    }
+    });
 }
 
 #[derive(Default)]
