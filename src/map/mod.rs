@@ -1,10 +1,7 @@
 mod generate_map;
 mod generate_navmesh;
 
-use bevy::prelude::{
-    default, App, Assets, Color, Commands, Component, Mesh, PbrBundle, Plugin, Query, ResMut,
-    StandardMaterial, State, SystemSet, Transform, Vec3,
-};
+use bevy::prelude::{App, Component, Plugin, Query, ResMut, State, SystemSet, Transform, Vec3};
 use bevy_ecs_tilemap::{prelude::TilemapType, TilemapPlugin};
 use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
@@ -20,8 +17,8 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MapDimensions {
-            width: 204,
-            height: 102,
+            width: 1024,
+            height: 1024,
         })
         .add_system_set(SystemSet::on_enter(GameState::MapGeneration).with_system(generate_map))
         .add_system_set(
@@ -38,7 +35,7 @@ impl Plugin for MapPlugin {
                 .with_system(move_to_gameplay_state)
                 .after(generate_map_namvesh_square_unoptimized),
         )
-        .add_system_set(SystemSet::on_update(GameState::Playing).with_system(draw_navmesh))
+        // .add_system_set(SystemSet::on_update(GameState::Playing).with_system(draw_navmesh))
         // .add_system(draw_navmesh)
         .add_plugin(TilemapPlugin)
         .add_plugin(DebugLinesPlugin::default());
@@ -83,7 +80,7 @@ fn draw_navmesh(
     // mut materials: ResMut<Assets<StandardMaterial>>,
     // mesh_exists: Query<&MeshExists>,
 ) {
-    for (navmesh, transform, _tilemap_type) in navmesh_q.iter() {
+    for (navmesh, _transform, _tilemap_type) in navmesh_q.iter() {
         // navmesh.debug_pa_navmesh.po
         // for vertex in navmesh.debug_pa_navmesh.vertices.iter() {
         //     let start = Vec3::new(vertex.coords.x, vertex.coords.y, 100.0);

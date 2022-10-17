@@ -41,7 +41,7 @@ impl Plugin for MyNavPlugin {
             .add_system_set(SystemSet::on_enter(GameState::Playing).with_system(setup))
             .add_system_set(
                 SystemSet::on_update(GameState::Playing)
-                    .with_system(on_mesh_change)
+                    // .with_system(on_mesh_change)
                     .with_system(go_somewhere)
                     .with_system(compute_paths)
                     .with_system(poll_path_tasks)
@@ -72,8 +72,8 @@ enum DisplayMode {
 }
 
 fn setup(mut commands: Commands, font_assets: Res<FontAssets>) {
-    // let font = asset_server.load("fonts/FiraMono-Medium.ttf");
     let font = font_assets.fira_sans.clone();
+
     commands.spawn_bundle(TextBundle {
         text: Text::from_sections([
             TextSection::new(
@@ -191,45 +191,32 @@ fn on_mesh_change(
     mut meshes: ResMut<Assets<Mesh>>,
     // pathmeshes: Res<Assets<PathMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    path_mesh_query: Query<&TempNavmesh>,
-    mut current_mesh_entity: Local<Option<Entity>>,
-    windows: Res<Windows>,
+    // path_mesh_query: Query<&TempNavmesh>,
+    // mut current_mesh_entity: Local<Option<Entity>>,
+    navmesh_entity_q: Query<(Entity, &TempNavmesh)>,
     window_resized: EventReader<WindowResized>,
     mut wait_for_mesh: Local<bool>,
 ) {
     if !window_resized.is_empty() || *wait_for_mesh {
-        let temp = path_mesh_query.single();
-        // let a = temp.navmesh;
-        // let handle = &path_meshes.aurora;
-        // if let Some(pathmesh) = pathmeshes.get(handle) {
-        let pathmesh = &temp.navmesh;
-        let mesh_size = temp.dimensions;
+        for (entity, navmesh_container) in navmesh_entity_q.iter() {
+            let pathmesh = &navmesh_container.navmesh;
 
-        *wait_for_mesh = false;
-        if let Some(entity) = *current_mesh_entity {
-            commands.entity(entity).despawn();
+            *wait_for_mesh = false;
+            // if let Some(entity) = *current_mesh_entity {
+            //     commands.entity(entity).despawn();
+            // }
+
+            commands.entity(entity).insert_bundle(MaterialMesh2dBundle {
+                mesh: meshes.add(pathmesh.to_mesh()).into(),
+                transform: Transform::from_translation(Vec3::ZERO).with_scale(Vec3::splat(1.0)),
+                material: materials.add(ColorMaterial::from(Color::DARK_GRAY)),
+                ..default()
+            });
+
+            // } else {
+            //     *wait_for_mesh = true;
+            // }
         }
-        let window = windows.primary();
-        let factor = (window.width() / mesh_size.x).min(window.height() / mesh_size.y);
-        // TODO: This transform is probably wrong.
-        *current_mesh_entity = Some(
-            commands
-                .spawn_bundle(MaterialMesh2dBundle {
-                    mesh: meshes.add(pathmesh.to_mesh()).into(),
-                    transform: Transform::from_translation(Vec3::new(
-                        -mesh_size.x / 2.0 * factor,
-                        -mesh_size.y / 2.0 * factor,
-                        0.0,
-                    ))
-                    .with_scale(Vec3::splat(factor)),
-                    material: materials.add(ColorMaterial::from(Color::DARK_GRAY)),
-                    ..default()
-                })
-                .id(),
-        );
-        // } else {
-        //     *wait_for_mesh = true;
-        // }
     }
 }
 
@@ -249,14 +236,11 @@ struct Path {
     path: Vec<Vec2>,
 }
 
-fn spawn(windows: Res<Windows>, mut commands: Commands, mesh_query: Query<&TempNavmesh>) {
-    let temp = mesh_query.single();
-    let mesh_size = &temp.dimensions;
+fn spawn(mut commands: Commands, // , mesh_query: Query<&TempNavmesh>
+) {
+    // let temp = mesh_query.single();
 
     let rng = fastrand::Rng::new();
-
-    let screen = Vec2::new(windows.primary().width(), windows.primary().height());
-    let factor = (screen.x / mesh_size.x).min(screen.y / mesh_size.y);
 
     let in_mesh_starts = [
         Vec2::new(575.0, 410.0),
@@ -269,25 +253,27 @@ fn spawn(windows: Res<Windows>, mut commands: Commands, mesh_query: Query<&TempN
         Vec2::new(300.0, 679.0),
     ];
 
-    let in_mesh = in_mesh_starts[rng.usize(0..in_mesh_starts.len())];
+    // let in_mesh = in_mesh_starts[rng.usize(0..in_mesh_starts.len())];
 
-    let position = (in_mesh - *mesh_size / 2.0) * factor;
-    let color = Color::hsl(rng.f32() * 360.0, 1.0, 0.5).as_rgba();
-    commands
-        .spawn_bundle(SpriteBundle {
-            sprite: Sprite {
-                color,
-                custom_size: Some(Vec2::ONE),
+    for in_mesh in in_mesh_starts {
+        let position = in_mesh;
+        let color = Color::hsl(rng.f32() * 360.0, 1.0, 0.5).as_rgba();
+        commands
+            .spawn_bundle(SpriteBundle {
+                sprite: Sprite {
+                    color,
+                    custom_size: Some(Vec2::ONE),
+                    ..default()
+                },
+                transform: Transform::from_translation(position.extend(1.0))
+                    .with_scale(Vec3::splat(5.0)),
                 ..default()
-            },
-            transform: Transform::from_translation(position.extend(1.0))
-                .with_scale(Vec3::splat(5.0)),
-            ..default()
-        })
-        .insert(Navigator {
-            speed: rng.f32() * 50.0 + 50.0,
-            color,
-        });
+            })
+            .insert(Navigator {
+                speed: rng.f32() * 50.0 + 50.0,
+                color,
+            });
+    }
 }
 
 #[derive(Default)]
@@ -305,24 +291,19 @@ fn compute_paths(
     mut commands: Commands,
     with_target: Query<(Entity, &Target, &Transform), Changed<Target>>,
     // meshes: Res<Assets<PathMesh>>,
-    windows: Res<Windows>,
     task_mode: Res<TaskMode>,
     mesh_query: Query<&TempNavmesh>,
     // mesh: Res<Meshes>,
 ) {
     let temp = mesh_query.single();
     let mesh = &temp.navmesh;
-    let mesh_size = &temp.dimensions;
     // let mesh = if let Some(mesh) = meshes.get(&mesh.aurora) {
     //     mesh
     // } else {
     //     return;
     // };
     for (entity, target, transform) in &with_target {
-        let window = windows.primary();
-        let factor = (window.width() / mesh_size.x).min(window.height() / mesh_size.y);
-
-        let in_mesh = transform.translation.truncate() / factor + *mesh_size / 2.0;
+        let in_mesh = transform.translation.truncate();
 
         let to = target.target;
         let mesh = mesh.clone();
@@ -363,11 +344,9 @@ fn poll_path_tasks(
     // pathmeshes: Res<Assets<PathMesh>>,
     // meshes: Res<Meshes>,
     mesh_query: Query<&TempNavmesh>,
-    windows: Res<Windows>,
 ) {
     let temp = mesh_query.single();
     let mesh = &temp.navmesh;
-    let mesh_size = &temp.dimensions;
 
     for (entity, task, transform) in &computing {
         let mut task = task.0.write().unwrap();
@@ -382,13 +361,10 @@ fn poll_path_tasks(
                     .insert(Path { path: path.path })
                     .remove::<FindingPath>();
             } else {
-                let screen = Vec2::new(windows.primary().width(), windows.primary().height());
-                let factor = (screen.x / mesh_size.x).min(screen.y / mesh_size.y);
-
                 // if !pathmeshes
                 //     .get(&meshes.aurora)
                 //     .unwrap()
-                if !mesh.is_in_mesh(transform.translation.xy() / factor + *mesh_size / 2.0) {
+                if !mesh.is_in_mesh(transform.translation.xy()) {
                     commands.entity(entity).despawn();
                 }
 
@@ -403,17 +379,13 @@ fn poll_path_tasks(
 
 fn move_navigator(
     mut query: Query<(Entity, &mut Transform, &mut Path, &Navigator)>,
-    windows: Res<Windows>,
     time: Res<Time>,
     mut commands: Commands,
-    mesh_q: Query<&TempNavmesh>,
+    // mesh_q: Query<&TempNavmesh>,
 ) {
-    let temp = mesh_q.single();
-    let mesh_size = &temp.dimensions;
-    let window = windows.primary();
-    let factor = (window.width() / mesh_size.x).min(window.height() / mesh_size.y);
+    // let temp = mesh_q.single();
     for (entity, mut transform, mut path, navigator) in &mut query {
-        let next = (path.path[0] - *mesh_size / 2.0) * factor;
+        let next = path.path[0];
         let toward = next - transform.translation.xy();
         // TODO: compare this in mesh dimensions, not in display dimensions
         if toward.length() < time.delta_seconds() * navigator.speed * 2.0 {
@@ -430,22 +402,17 @@ fn move_navigator(
 fn display_path(
     query: Query<(&Transform, &Path, &Navigator)>,
     mut lines: ResMut<DebugLines>,
-    windows: Res<Windows>,
     display_mode: Res<DisplayMode>,
-    mesh_q: Query<&TempNavmesh>,
+    // mesh_q: Query<&TempNavmesh>,
 ) {
     if *display_mode == DisplayMode::Line {
-        let temp = mesh_q.single();
-        let mesh_size = &temp.dimensions;
-
-        let window = windows.primary();
-        let factor = (window.width() / mesh_size.x).min(window.height() / mesh_size.y);
+        // let temp = mesh_q.single();
 
         for (transform, path, navigator) in &query {
             (1..path.path.len()).for_each(|i| {
                 lines.line_colored(
-                    ((path.path[i - 1] - *mesh_size / 2.0) * factor).extend(0f32),
-                    ((path.path[i] - *mesh_size / 2.0) * factor).extend(0f32),
+                    (path.path[i - 1]).extend(0f32),
+                    (path.path[i]).extend(0f32),
                     0f32,
                     navigator.color,
                 );
@@ -453,7 +420,7 @@ fn display_path(
             if let Some(next) = path.path.first() {
                 lines.line_colored(
                     transform.translation,
-                    ((*next - *mesh_size / 2.0) * factor).extend(0f32),
+                    (*next).extend(0f32),
                     0f32,
                     navigator.color,
                 );
