@@ -16,6 +16,9 @@ use bevy::app::App;
 // #[cfg(debug_assertions)]
 use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
 use bevy::prelude::*;
+use bevy::utils::HashSet;
+use bevy_ecs_tilemap::TilemapPlugin;
+use bevy_inspector_egui::{WorldInspectorPlugin, WorldInspectorParams};
 use map::MapPlugin;
 
 // This example game uses States to separate logic
@@ -43,13 +46,23 @@ impl Plugin for GamePlugin {
             .add_plugin(MapPlugin)
             .add_plugin(ActionsPlugin)
             .add_plugin(InternalAudioPlugin)
-            .add_plugin(PlayerPlugin);
+            .add_plugin(PlayerPlugin)
+            .add_plugin(TilemapPlugin);
 
         // #[cfg(debug_assertions)]
         {
-            app
-                .add_plugin(FrameTimeDiagnosticsPlugin::default())
-                .add_plugin(LogDiagnosticsPlugin::default());
+            let mut ignore_components = HashSet::new();
+            // ignore_components.insert(value)
+
+            app.insert_resource(WorldInspectorParams {
+                ignore_components,
+                despawnable_entities: true,
+                highlight_changes: true,
+                ..Default::default()
+            })
+            .add_plugin(WorldInspectorPlugin::new())
+            .add_plugin(FrameTimeDiagnosticsPlugin::default())
+            .add_plugin(LogDiagnosticsPlugin::default());
         }
     }
 }

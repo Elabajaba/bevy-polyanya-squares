@@ -2,7 +2,7 @@ mod generate_map;
 mod generate_navmesh;
 
 use bevy::prelude::{App, Component, Plugin, Query, ResMut, State, SystemSet, Transform, Vec3};
-use bevy_ecs_tilemap::{prelude::TilemapType, TilemapPlugin};
+use bevy_ecs_tilemap::prelude::TilemapType;
 use bevy_prototype_debug_lines::{DebugLines, DebugLinesPlugin};
 
 use crate::{
@@ -17,8 +17,8 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MapDimensions {
-            width: 1024,
-            height: 1024,
+            width: 120,
+            height: 90,
         })
         .add_system_set(SystemSet::on_enter(GameState::MapGeneration).with_system(generate_map))
         .add_system_set(
@@ -37,7 +37,6 @@ impl Plugin for MapPlugin {
         )
         // .add_system_set(SystemSet::on_update(GameState::Playing).with_system(draw_navmesh))
         // .add_system(draw_navmesh)
-        .add_plugin(TilemapPlugin)
         .add_plugin(DebugLinesPlugin::default());
     }
 }
