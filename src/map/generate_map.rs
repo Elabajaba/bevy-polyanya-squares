@@ -6,7 +6,7 @@ use bevy_ecs_tilemap::{
     prelude::{
         get_tilemap_center_transform, TilemapId, TilemapSize, TilemapTexture, TilemapTileSize,
     },
-    tiles::{TileBundle, TilePos, TileStorage},
+    tiles::{TileBundle, TilePos, TileStorage, TileTexture},
     TilemapBundle,
 };
 
@@ -27,18 +27,22 @@ pub(crate) fn generate_map(
     };
     let mut tile_storage = TileStorage::empty(tilemap_size);
     let tilemap_entity = commands.spawn().id();
+    let rng = fastrand::Rng::with_seed(1);
 
     for x in 0..map_dimensions.width {
         for y in 0..map_dimensions.height {
             let tile_pos = TilePos { x, y };
+            let tile_cost = rng.i8(-2..8);
+            let texture = if tile_cost < 1 { 1 } else { 0 };
             let tile_entity = commands
                 .spawn()
                 .insert_bundle(TileBundle {
                     position: tile_pos,
                     tilemap_id: TilemapId(tilemap_entity),
+                    texture: TileTexture(texture),
                     ..Default::default()
                 })
-                .insert(TileCost::default())
+                .insert(TileCost(tile_cost))
                 .id();
             tile_storage.set(&tile_pos, tile_entity);
         }

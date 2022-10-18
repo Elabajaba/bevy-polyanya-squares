@@ -187,13 +187,11 @@ fn setup(mut commands: Commands, font_assets: Res<FontAssets>) {
     });
 }
 
+#[allow(unused)]
 fn on_mesh_change(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    // pathmeshes: Res<Assets<PathMesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    // path_mesh_query: Query<&TempNavmesh>,
-    // mut current_mesh_entity: Local<Option<Entity>>,
     navmesh_entity_q: Query<(Entity, &TempNavmesh)>,
     window_resized: EventReader<WindowResized>,
     mut wait_for_mesh: Local<bool>,

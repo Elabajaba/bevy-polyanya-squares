@@ -17,8 +17,8 @@ pub struct MapPlugin;
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MapDimensions {
-            width: 120,
-            height: 90,
+            width: 200,
+            height: 100,
         })
         .add_system_set(SystemSet::on_enter(GameState::MapGeneration).with_system(generate_map))
         .add_system_set(
@@ -71,6 +71,7 @@ pub struct MapDimensions {
 #[derive(Component)]
 struct MeshExists;
 
+#[allow(unused)]
 fn draw_navmesh(
     mut lines: ResMut<DebugLines>,
     navmesh_q: Query<(&TempNavmesh, &Transform, &TilemapType)>,
@@ -81,13 +82,13 @@ fn draw_navmesh(
 ) {
     for (navmesh, _transform, _tilemap_type) in navmesh_q.iter() {
         // navmesh.debug_pa_navmesh.po
-        // for vertex in navmesh.debug_pa_navmesh.vertices.iter() {
-        //     let start = Vec3::new(vertex.coords.x, vertex.coords.y, 100.0);
-        //     let end = start.clone() + Vec3::ONE;
+        navmesh.debug_pa_navmesh.vertices.iter().for_each(|vertex| {
+            let start = Vec3::new(vertex.coords.x, vertex.coords.y, 100.0);
+            let end = start.clone() + Vec3::ONE;
 
-        //     let duration = 0.0; // Duration of 0 will show the line for 1 frame.
-        //     lines.line(start, end, duration);
-        // }
+            let duration = 0.0; // Duration of 0 will show the line for 1 frame.
+            lines.line(start, end, duration);
+        });
 
         // for vertex in navmesh.vertices.keys() {
         //     let start = Vec3::new(
@@ -100,32 +101,32 @@ fn draw_navmesh(
         //     lines.line(start, end, duration);
         // }
 
-        for (_i, polygon) in navmesh.debug_pa_navmesh.polygons.iter().enumerate() {
-            [(0, 1), (1, 2), (2, 3), (3, 0)].iter().for_each(|(a, b)| {
-                let start_idx = polygon.vertices[*a];
-                let end_idx = polygon.vertices[*b];
-                let temp1 = navmesh
-                    .debug_pa_navmesh
-                    .vertices
-                    .get(start_idx as usize)
-                    .expect(&format!(
-                        "debug line start index is out of bounds: {:?}",
-                        start_idx
-                    ));
-                let temp2 = navmesh
-                    .debug_pa_navmesh
-                    .vertices
-                    .get(end_idx as usize)
-                    .expect(&format!(
-                        "debug line end index is out of bounds: {:?}",
-                        end_idx
-                    ));
-                let start = Vec3::new(temp1.coords.x as f32, temp1.coords.y as f32, 100.0);
-                let end = Vec3::new(temp2.coords.x as f32, temp2.coords.y as f32, 100.0);
+        // for (_i, polygon) in navmesh.debug_pa_navmesh.polygons.iter().enumerate() {
+        //     [(0, 1), (1, 2), (2, 3), (3, 0)].iter().for_each(|(a, b)| {
+        //         let start_idx = polygon.vertices[*a];
+        //         let end_idx = polygon.vertices[*b];
+        //         let temp1 = navmesh
+        //             .debug_pa_navmesh
+        //             .vertices
+        //             .get(start_idx as usize)
+        //             .expect(&format!(
+        //                 "debug line start index is out of bounds: {:?}",
+        //                 start_idx
+        //             ));
+        //         let temp2 = navmesh
+        //             .debug_pa_navmesh
+        //             .vertices
+        //             .get(end_idx as usize)
+        //             .expect(&format!(
+        //                 "debug line end index is out of bounds: {:?}",
+        //                 end_idx
+        //             ));
+        //         let start = Vec3::new(temp1.coords.x as f32, temp1.coords.y as f32, 100.0);
+        //         let end = Vec3::new(temp2.coords.x as f32, temp2.coords.y as f32, 100.0);
 
-                let duration = 0.0; // Duration of 0 will show the line for 1 frame.
-                lines.line(start, end, duration);
-            });
-        }
+        //         let duration = 0.0; // Duration of 0 will show the line for 1 frame.
+        //         lines.line(start, end, duration);
+        //     });
+        // }
     }
 }

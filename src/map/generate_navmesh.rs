@@ -1,6 +1,6 @@
 use bevy::{
-    prelude::{info, Commands, Component, Entity, IVec2, Query, Transform, Vec2},
-    utils::{HashSet, Instant},
+    prelude::{debug, info, Commands, Component, Entity, IVec2, Query, Transform, Vec2},
+    utils::{HashMap, HashSet, Instant},
 };
 use indexmap::IndexMap;
 use polyanya::{Mesh as PAMesh, Polygon as PAPoly, Vertex as PAVertex};
@@ -61,28 +61,31 @@ pub(crate) fn generate_map_namvesh_square_unoptimized(
     )>,
     tile_query: Query<(&TilePos, &TileCost)>,
 ) {
-    println!("trying to generate navmesh");
+    info!("trying to generate navmesh");
     let start_time = Instant::now();
-    // println!("tilemap query size: {}", tilemap_query.)
     for (entity, map_type, grid_size, tilemap_storage, transform) in tilemap_query.iter() {
         // We have the vertices and their connected polygons, but not if they're an edge
 
         // num tiles * 1.3 sounds about right?
         let mut vertices: IndexMap<IVec2, Connections> =
             IndexMap::with_capacity((tilemap_storage.size.count() as f32 * 1.3) as usize);
-        // let poly_idx: HashMap<IVec2, usize> = HashMap::new();
+
+        let mut poly_indices: HashMap<IVec2, isize> = HashMap::new();
+        let mut highest = 0;
 
         let mut polygons: Vec<Polys> = Vec::with_capacity(tilemap_storage.size.count());
 
         for tile_entity in tilemap_storage.iter().flatten() {
             let (tile_pos, tile_cost) = tile_query.get(*tile_entity).unwrap();
-            let world_pos = tile_pos.center_in_world(grid_size, map_type);
+            let world_pos =
+                tile_pos.center_in_world(grid_size, map_type) + transform.translation.truncate();
             // println!("world_pos: {}", world_pos);
             let poly_idx = if tile_cost.0 < 1 {
                 -1
             } else {
-                // TODO: This doesn't work
-                tile_pos.to_index(&tilemap_storage.size) as isize
+                let idx = poly_indices.entry(world_pos.as_ivec2()).or_insert(highest);
+                highest += 1;
+                *idx
             };
             let mut vertex_indices: [usize; 4] = [0; 4];
 
@@ -96,13 +99,15 @@ pub(crate) fn generate_map_namvesh_square_unoptimized(
             .enumerate()
             .for_each(|(idx, &corner_pos)| {
                 let pos = IVec2::new(
-                    corner_pos.0 + (world_pos.x + transform.translation.x) as i32,
-                    corner_pos.1 + (world_pos.y + transform.translation.y) as i32,
+                    corner_pos.0 + (world_pos.x) as i32,
+                    corner_pos.1 + (world_pos.y) as i32,
                 );
                 let connections_entry = vertices.entry(pos);
                 vertex_indices[idx] = connections_entry.index();
                 let connections = connections_entry.or_insert(Connections::new());
-                connections.connection_indices.push(poly_idx);
+                if poly_idx > -1 {
+                    connections.connection_indices.push(poly_idx);
+                }
             });
             if tile_cost.0 < 1 {
                 continue;
@@ -118,25 +123,26 @@ pub(crate) fn generate_map_namvesh_square_unoptimized(
         // TODO: Do this properly, currently just adding None to ever vertex with <3 connections
         for (vertex_pos, connections) in vertices.iter_mut() {
             // if all vertex connections are -1, then skip this vertex
-            let mut temp = connections.connection_indices.clone();
-            temp.sort_unstable();
-            if temp[temp.len() - 1] == -1 {
-                // orphan vertex, do nothing
-                println!("orphan vertex");
-                continue;
-            } else {
-                if connections.connection_indices.len() < 4 {
-                    let mut temp: Vec<isize> = connections.connection_indices.clone();
-                    // TODO: This is probably in the wrong place.
-                    temp.push(-1);
-
-                    let vertex = PAVertex::new(vertex_pos.as_vec2(), temp);
-                    pa_vertices.push(vertex);
-                } else {
-                    let vertex =
-                        PAVertex::new(vertex_pos.as_vec2(), connections.connection_indices.clone());
-                    pa_vertices.push(vertex);
+            if connections.connection_indices.len() > 0 {
+                let mut temp = connections.connection_indices.clone();
+                temp.sort_unstable();
+                if temp[temp.len() - 1] == -1 {
+                    // orphan vertex, do nothing
+                    println!("orphan vertex");
+                    continue;
                 }
+            }
+            if connections.connection_indices.len() < 4 {
+                let mut temp: Vec<isize> = connections.connection_indices.clone();
+                // TODO: This is probably in the wrong place.
+                temp.push(-1);
+
+                let vertex = PAVertex::new(vertex_pos.as_vec2(), temp);
+                pa_vertices.push(vertex);
+            } else {
+                let vertex =
+                    PAVertex::new(vertex_pos.as_vec2(), connections.connection_indices.clone());
+                pa_vertices.push(vertex);
             }
         }
 
@@ -156,16 +162,18 @@ pub(crate) fn generate_map_namvesh_square_unoptimized(
                 .collect();
             let polygon = PAPoly::new(temp_vertices, is_one_way);
             pa_polys.push(polygon);
-            // TODO
         }
 
         pa_vertices.shrink_to_fit();
         pa_polys.shrink_to_fit();
-        println!("Vertices len: {}", pa_vertices.len());
-        println!("polys len: {}", pa_polys.len());
+        debug!("Vertices len: {}", pa_vertices.len());
+        debug!("polys len: {}", pa_polys.len());
 
         let mut navmesh = PAMesh::new(pa_vertices, pa_polys);
+        let pre_bake = Instant::now();
         navmesh.bake();
+        let post_bake = Instant::now();
+        info!("time to bake navmesh: {:?}", post_bake - pre_bake);
 
         // TODO: Sort the polygons
         // let temp_polys: Vec<[usize; 4]> = polygons.iter().map(|poly| poly.vertex_indices).collect();
