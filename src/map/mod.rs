@@ -14,11 +14,13 @@ pub use crate::map::generate_navmesh::TempNavmesh;
 
 pub struct MapPlugin;
 
+const MAP_SIZE: (u32, u32) = (100, 70);
+
 impl Plugin for MapPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(MapDimensions {
-            width: 200,
-            height: 100,
+            width: MAP_SIZE.0,
+            height: MAP_SIZE.1,
         })
         .add_system_set(SystemSet::on_enter(GameState::MapGeneration).with_system(generate_map))
         .add_system_set(

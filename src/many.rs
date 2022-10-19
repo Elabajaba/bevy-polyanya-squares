@@ -21,6 +21,8 @@ use bevy_prototype_debug_lines::DebugLines;
 
 use crate::{loading::FontAssets, map::TempNavmesh, GameState};
 
+const SPAWN_LIMIT: u64 = 10000;
+
 pub struct MyNavPlugin;
 
 impl Plugin for MyNavPlugin {
@@ -236,7 +238,7 @@ struct Path {
 }
 
 // #[derive(Resource)]
-struct NavigatorCount(usize);
+struct NavigatorCount(u64);
 
 impl Default for NavigatorCount {
     fn default() -> Self {
@@ -249,7 +251,7 @@ fn spawn(
     mut navigator_count: ResMut<NavigatorCount>,
     transform_q: Query<&Transform, With<TempNavmesh>>,
 ) {
-    if navigator_count.0 >= 100000 {
+    if navigator_count.0 >= SPAWN_LIMIT {
         return;
     }
 
