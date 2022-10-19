@@ -453,8 +453,6 @@ fn poll_path_tasks(
     mut commands: Commands,
     computing: Query<(Entity, &FindingPath, &Transform)>,
     mut stats: ResMut<Stats>,
-    // pathmeshes: Res<Assets<PathMesh>>,
-    // meshes: Res<Meshes>,
     mesh_query: Query<&TempNavmesh>,
 ) {
     let temp = mesh_query.single();
@@ -473,9 +471,6 @@ fn poll_path_tasks(
                     .insert(Path { path: path.path })
                     .remove::<FindingPath>();
             } else {
-                // if !pathmeshes
-                //     .get(&meshes.aurora)
-                //     .unwrap()
                 if !mesh.is_in_mesh(transform.translation.xy()) {
                     commands.entity(entity).despawn();
                 }

@@ -122,15 +122,17 @@ pub(crate) fn generate_map_namvesh_square_unoptimized(
         // TODO: Sort vertex neighbours, and also add -1 for empty polys
         // TODO: Do this properly, currently just adding None to ever vertex with <3 connections
         for (vertex_pos, connections) in vertices.iter_mut() {
-            // if all vertex connections are -1, then skip this vertex
             if connections.connection_indices.len() > 0 {
+                // if all vertex connections are -1, then skip this vertex
                 let mut temp = connections.connection_indices.clone();
                 temp.sort_unstable();
                 if temp[temp.len() - 1] == -1 {
                     // orphan vertex, do nothing
-                    println!("orphan vertex");
                     continue;
                 }
+            } else {
+                // No connections
+                continue;
             }
             if connections.connection_indices.len() < 4 {
                 let mut temp: Vec<isize> = connections.connection_indices.clone();
@@ -192,7 +194,3 @@ pub(crate) fn generate_map_namvesh_square_unoptimized(
     let end_time = Instant::now();
     info!("time to generate navmesh: {:?}", end_time - start_time);
 }
-
-// Find the 4 corners
-// Spawn a vertex at each of those, if there isn't already one there
-//
