@@ -50,7 +50,8 @@ impl Plugin for MyNavPlugin {
                     .with_system(poll_path_tasks)
                     .with_system(move_navigator)
                     .with_system(display_path)
-                    .with_system(mode_change),
+                    .with_system(mode_change)
+                    .with_system(go_to_mouse)
             )
             .add_system_set(
                 SystemSet::on_update(GameState::Playing)
@@ -249,11 +250,14 @@ impl Default for NavigatorCount {
 fn spawn(
     mut commands: Commands,
     mut navigator_count: ResMut<NavigatorCount>,
-    transform_q: Query<&Transform, With<TempNavmesh>>,
+    transform_q: Query<(&Transform, &TempNavmesh)>,
 ) {
     if navigator_count.0 >= SPAWN_LIMIT {
         return;
     }
+
+    let (transform, navmesh_container) = transform_q.single();
+    let mesh_size = &navmesh_container.dimensions;
 
     let rng = fastrand::Rng::new();
 
@@ -302,7 +306,7 @@ fn spawn(
 
     in_mesh_starts.iter().for_each(|in_mesh| {
         navigator_count.0 += 1;
-        let position = *in_mesh + transform_q.single().translation.truncate();
+        let position = *in_mesh + transform.translation.truncate();
         let color = Color::hsl(rng.f32() * 360.0, 1.0, 0.5).as_rgba();
         commands
             .spawn_bundle(SpriteBundle {
@@ -328,6 +332,68 @@ struct TaskResult {
     done: bool,
     delay: f32,
     duration: f32,
+}
+
+fn go_to_mouse(
+    mut commands: Commands,
+    mesh_q: Query<&TempNavmesh>,
+    windows: Res<Windows>,
+    q_camera: Query<(&Camera, &GlobalTransform)>,
+    buttons: Res<Input<MouseButton>>,
+    navigators: Query<
+        (Entity, Option<&Path>, Option<&FindingPath>, Option<&Target>),
+        (With<Navigator>,),
+    >,
+) {
+    if buttons.just_pressed(MouseButton::Right) {
+        println!("pressed rmb");
+        let temp = mesh_q.single();
+        let navmesh = &temp.navmesh;
+
+        let window = windows.get_primary().unwrap();
+
+        if let Some(position) = window.cursor_position() {
+            // cursor is inside the window, position given
+            let (camera, camera_transform) = q_camera.single();
+            // get the size of the window
+            let window_size = Vec2::new(window.width() as f32, window.height() as f32);
+
+            // convert screen position [0..resolution] to ndc [-1..1] (gpu coordinates)
+            let ndc = (position / window_size) * 2.0 - Vec2::ONE;
+
+            // matrix for undoing the projection and camera transform
+            let ndc_to_world =
+                camera_transform.compute_matrix() * camera.projection_matrix().inverse();
+
+            // use it to convert ndc to world-space coordinates
+            let world_pos = ndc_to_world.project_point3(ndc.extend(-1.0));
+
+            // reduce it to a 2D value
+            let world_pos: Vec2 = world_pos.truncate();
+
+            if navmesh.is_in_mesh(world_pos) {
+                println!("++++++point: {} is in mesh", world_pos);
+            } else {
+                println!("------point: {} is not in mesh", world_pos);
+            }
+
+            navigators.for_each(|(entity, path, finding_path, target)| {
+                if path.is_some() {
+                    commands.entity(entity).remove::<Path>();
+                }
+                if finding_path.is_some() {
+                    commands.entity(entity).remove::<FindingPath>();
+                }
+                if target.is_some() {
+                    commands.entity(entity).remove::<Target>();
+                }
+
+                commands.entity(entity).insert(Target { target: world_pos });
+            });
+        } else {
+            // cursor is not inside the window
+        }
+    }
 }
 
 #[derive(Component)]
