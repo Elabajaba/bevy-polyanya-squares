@@ -16,6 +16,7 @@ impl Plugin for ActionsPlugin {
 #[derive(Default)]
 pub struct Actions {
     pub player_movement: Option<Vec2>,
+    pub sprint: bool,
 }
 
 fn set_movement_actions(mut actions: ResMut<Actions>, keyboard_input: Res<Input<KeyCode>>) {
@@ -72,6 +73,12 @@ fn set_movement_actions(mut actions: ResMut<Actions>, keyboard_input: Res<Input<
         }
     } else {
         actions.player_movement = None;
+    }
+
+    if keyboard_input.pressed(KeyCode::LShift) {
+        actions.sprint = true;
+    } else {
+        actions.sprint = false;
     }
 }
 
