@@ -29,12 +29,12 @@ bevy = { version = "0.8", default-features = false, features = [
 ] }
 bevy_kira_audio = { version = "0.12" }
 bevy_asset_loader = { version = "0.12" }
-polyanya = "0.1.6"
+polyanya = { version = "0.1", features = ["no-default-baking"] }
 fastrand = "1.8.0"
 leafwing-input-manager = "0.5.2"
 bevy_egui = "0.16.1"
 bevy-inspector-egui = "0.13.0"
-bevy_pathmesh = {git = "https://github.com/vleue/bevy_pathmesh.git", branch = "main" } 
+bevy_pathmesh = { git = "https://github.com/vleue/bevy_pathmesh.git", branch = "main" }
 
 # keep the following in sync with Bevy's dependencies
 winit = { version = "0.26.0", default-features = false }
@@ -43,6 +43,8 @@ bevy_ecs_tilemap = "0.8.0"
 # rkyv = "0.7.39"
 indexmap = "1.9.1"
 bevy_prototype_debug_lines = "0.8.1"
+iyes_loopless = "0.7.1"
+dashmap = "5.4.0"
 # bevy_config_cam = { git = "https://github.com/BlackPhlox/bevy_config_cam.git", branch = "bevy_dolly" }
 
 [build-dependencies]
